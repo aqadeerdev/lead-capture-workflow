@@ -1,0 +1,334 @@
+{
+  "name": "Lead Capture Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json.body.data;\nconst fields = data.fields;\n\nlet rawName = null;\nlet rawEmail = null;\nlet rawMessage = null;\n\nfor (const field of fields) {\n  if (field.label == 'Full Name') {\n    rawName = field.value ? field.value : null;\n  } else if (field.label == 'Email Address') {\n    rawEmail = field.value ? field.value : null;\n  } else if (field.label == 'Message') {\n    rawMessage = field.value ? field.value : null;\n  }\n}\n// Validate email format\nconst emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\nconst isValidEmail = rawEmail && emailRegex.test(rawEmail);\n\n// Trim and normalize\nconst name = rawName ? rawName.trim() : null;\nconst email = rawEmail ? rawEmail.trim().toLowerCase() : null;\nconst message = rawMessage ? rawMessage.trim() : '';\n\n// Split name into first/last for CRM mapping\nconst nameParts = name ? name.split(' ') : [];\nconst firstName = nameParts[0] || '';\nconst lastName = nameParts.slice(1).join(' ') || '';\n\n// Flag invalid submissions instead of silently failing\nif (!name || !email || !isValidEmail) {\n  return [{\n    json: {\n      valid: false,\n      error: !email ? 'Missing email' : !isValidEmail ? 'Invalid email format' : 'Missing name',\n      rawName,\n      rawEmail\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    valid: true,\n    firstName,\n    lastName,\n    fullName: name,\n    email,\n    message,\n    submittedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "47a18aec-0e4f-478d-bf53-ad7f88263852",
+      "name": "Validate"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "9a920010-c603-4d02-be47-1c066cc2db60",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "={{ true }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        0
+      ],
+      "id": "929f82f0-1dc0-4a12-a8dc-1202fbb226de",
+      "name": "If Valid"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#demoleads",
+          "mode": "name"
+        },
+        "text": "=New Lead\nFull Name: {{ $('Validate').item.json.fullName }}\nEmail: {{ $('Validate').item.json.email }}\nMessage: {{ $('Validate').item.json.message }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        1120,
+        -96
+      ],
+      "id": "f8f7b049-977e-4670-abf0-8a7cb81c7565",
+      "name": "Send Lead Notification",
+      "webhookId": "fc13f612-4070-4226-9531-dfb1653ff780",
+      "credentials": {
+        "slackApi": {
+          "id": "fZzjitJGoEsodiuy",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appp3aUvSI540vXPs",
+          "mode": "list",
+          "cachedResultName": "Demo base",
+          "cachedResultUrl": "https://airtable.com/appp3aUvSI540vXPs"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblz0ogEBvX4MQSh6",
+          "mode": "list",
+          "cachedResultName": "Form Submissions",
+          "cachedResultUrl": "https://airtable.com/appp3aUvSI540vXPs/tblz0ogEBvX4MQSh6"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "First Name": "={{ $json.firstName }}",
+            "Last Name": "={{ $json.lastName }}",
+            "Email": "={{ $json.email }}",
+            "Message": "={{ $json.message }}",
+            "Submitted At": "={{ $json.submittedAt }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "First Name",
+              "displayName": "First Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Last Name",
+              "displayName": "Last Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Submitted At",
+              "displayName": "Submitted At",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        896,
+        -96
+      ],
+      "id": "05c56233-92b9-4ed2-9e7a-e1eb6f331175",
+      "name": "Create Submission Record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "VCHeUnWEge9IEQCX",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "contact@company.com",
+        "toEmail": "={{ $('Validate').item.json.email }}",
+        "subject": "Thanks for reaching out.",
+        "html": "=<p>Hi {{ $('Validate').item.json.fullName }},</p>\n<p>Thanks for reaching out! We will get back to you shortly.</p>\n<p>Team Lead Bot</p>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1344,
+        -96
+      ],
+      "id": "827dccff-593e-4e96-b386-bd21248fe24c",
+      "name": "Send Email To Submitter",
+      "webhookId": "3d10bfb8-3091-4860-9b1d-fb85d9bc9585",
+      "credentials": {
+        "smtp": {
+          "id": "mxu7TR6o8hEeMfk3",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#demoleads",
+          "mode": "name"
+        },
+        "text": "=Invalid Form Submission\nError: {{ $json.error }} \nRaw Email: {{ $json.rawEmail }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        896,
+        96
+      ],
+      "id": "c6976063-3540-419b-ade2-716c64907f16",
+      "name": "Send Invalid Submission Alert",
+      "webhookId": "e21b454f-3c82-4677-aba6-7c51a735f643",
+      "credentials": {
+        "slackApi": {
+          "id": "fZzjitJGoEsodiuy",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "e62cbf2b-5226-450d-af27-a67603f91049",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "81a26c44-ff9c-4807-abd2-8a1461ad3ad3",
+      "name": "Webhook",
+      "webhookId": "e62cbf2b-5226-450d-af27-a67603f91049"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Validate": {
+      "main": [
+        [
+          {
+            "node": "If Valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Valid": {
+      "main": [
+        [
+          {
+            "node": "Create Submission Record",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Invalid Submission Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Lead Notification": {
+      "main": [
+        [
+          {
+            "node": "Send Email To Submitter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Submission Record": {
+      "main": [
+        [
+          {
+            "node": "Send Lead Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "f33f578b-e3d0-4bda-9198-afd648a97297",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fab56c544a556628ec92598be495d2fbabd06404d2473c2397b24a85271f9f20"
+  },
+  "nodeGroups": [],
+  "id": "qJobtCAOC6gLAOnI",
+  "tags": []
+}
