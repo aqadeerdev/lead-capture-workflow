@@ -28,10 +28,6 @@ Small businesses and solo teams lose leads when there's a gap between form submi
 
 **Note:** The Code node extracts fields by matching on Tally's field labels (`Full Name`, `Email Address`, `Message`). Adjust these if your form uses different labels.
 
-
-## Demo
-[Video walkthrough link]
-
 ## Possible Improvements
 - Swap Airtable for a full CRM (HubSpot, Pipedrive) for production use.
 - Add deduplication logic to check for existing email before creating a new Airtable record.
